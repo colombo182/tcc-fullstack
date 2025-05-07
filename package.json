@@ -1,0 +1,28 @@
+{
+  "name": "espelhointeligente",
+  "version": "1.0.0",
+  "description": "TCC - Espelho Inteligente ((Pedro Polidori Colombo)",
+  "main": "scripts/index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "scripts": {
+    "start": "DISPLAY=\"${DISPLAY:=:0}\" ./node_modules/.bin/electron scripts/index.js",
+    "install": "electron-rebuild",
+    "build": "browserify scripts/teste2.js -o bundle.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Pedro Polidori Colombo",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^20.1.4",
+    "electron-rebuild": "^3.2.9"
+  },
+  "dependencies": {
+    "browserify-fs": "^1.0.0",
+    "electron-prebuilt": "^1.4.13",
+    "i": "^0.3.7",
+    "requirejs": "^2.3.6"
+  }
+}
