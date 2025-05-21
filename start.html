@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <style>
+      body {
+        background: #000;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+      .countdown {
+        position: fixed;
+        top: 20px;
+        left: 20px;  /* Back to original position */
+        color: #FFF;
+        font-size: 16px;
+        font-family: "Roboto Condensed";
+        z-index: 1000;
+      }
+      .mirror-container {
+        flex: 1;
+        margin: 20px;
+        position: relative;
+        background: transparent;
+      }
+      .welcome-text {
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        color: #FFF;
+        font-family: "Roboto Condensed";
+        font-size: 24px;
+      }
+      .menu-button {
+        position: absolute;
+        top: 20px;    /* Match countdown top position */
+        left: 0px;  /* Increased from -10px to move button more right */
+        padding: 0;   /* Remove padding to match text size */
+        margin: 0;
+        background: transparent;
+        color: #4285f4;  /* Changed from #FFF to blue */
+        font-weight: bold;  /* Added bold */
+        border: none;
+        border-radius: 0;  /* Remove border radius */
+        font-family: "Roboto Condensed";
+        font-size: 16px;
+        cursor: pointer;
+        transition: color 0.2s ease;
+      }
+      .menu-button:hover {
+        color: #80a9f6;
+        background: transparent;
+      }
+      /* Removed .menu-button:active style */
+      .weather-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        color: #FFF;
+        font-family: "Roboto Condensed";
+        text-align: right;
+        z-index: 1000;
+      }
+      .weather-info {
+        font-size: 16px;
+        line-height: 1.8;
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="countdown" class="countdown"></div>
+    <div class="mirror-container">
+      <div class="welcome-text">Bem-vindo ao Espelho Inteligente</div>
+      <button class="menu-button" onclick="window.location.href='menu.html'">Voltar ao Menu</button>
+    </div>
+    <div class="weather-container">
+      <div class="weather-info" id="weather-info"></div>
+    </div>
+    <script>
+      let countdownInterval;
+      let secondsLeft = 30;
+
+      startCountdown();
+
+      function startCountdown() {
+          clearInterval(countdownInterval);
+          secondsLeft = 30;
+          const countdownDisplay = document.getElementById('countdown');
+          
+          countdownInterval = setInterval(() => {
+              secondsLeft--;
+              countdownDisplay.textContent = `Tela desligará em: ${secondsLeft} segundos`;
+              
+              if (secondsLeft <= 0) {
+                  clearInterval(countdownInterval);
+                  const { exec } = require('child_process');
+                  exec('bash scripts/display_off.sh', (error) => {
+                      if (error) console.error('Error executing display_off.sh:', error);
+                  });
+                  countdownDisplay.textContent = 'Tela desligada';
+              }
+          }, 1000);
+      }
+
+      function resetCountdown() {
+          clearInterval(countdownInterval);
+          secondsLeft = 30;
+          const { exec } = require('child_process');
+          exec('bash scripts/display_on.sh', (error) => {
+              if (error) console.error('Error executing display_on.sh:', error);
+          });
+          startCountdown();
+      }
+
+      document.addEventListener('mousemove', resetCountdown);
+      document.addEventListener('keypress', resetCountdown);
+
+      const API_KEY = '6c69e08fb45939e6ebc0cb6e9c8c317a'; // Replace with your OpenWeather API key
+      let weatherUpdateInterval;
+
+      function updateWeather() {
+          const city = localStorage.getItem('localizacao');
+          if (!city) return;
+
+          fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${API_KEY}`)
+              .then(response => {
+                  if (!response.ok) {
+                      throw new Error(`HTTP error! status: ${response.status}`);
+                  }
+                  return response.json();
+              })
+              .then(data => {
+                  const weatherInfo = document.getElementById('weather-info');
+                  weatherInfo.innerHTML = `
+                      <img src="http://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png" style="width: 85px; height: 85px; margin-top: 25px; margin-left: 25px;">
+                      <div style="text-align: right">
+                          <strong>${city}</strong><br>
+                          Temperatura: ${data.main.temp.toFixed(1)}°C<br>
+                          Umidade: ${data.main.humidity}%<br>
+                          Sensação térmica: ${data.main.feels_like.toFixed(1)}°C<br>
+                          Máxima: ${data.main.temp_max.toFixed(1)}°C<br>
+                          Mínima: ${data.main.temp_min.toFixed(1)}°C
+                      </div>
+                  `;
+              })
+              .catch(error => {
+                  console.error('Error fetching weather:', error);
+                  // Wait longer before retrying on error
+                  setTimeout(updateWeather, 900000); // 15 minutes
+              });
+      }
+
+      function startWeatherUpdates() {
+          const interval = localStorage.getItem('intervalo_medicao') || 600000; // Changed to 10 minutes default
+          updateWeather();
+          weatherUpdateInterval = setInterval(updateWeather, interval);
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+          startWeatherUpdates();
+      });
+    </script>
+  </body>
+</html>

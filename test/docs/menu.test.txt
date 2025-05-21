@@ -1,0 +1,23 @@
+MENU.TEST.JS - MENU INTERFACE UNIT TESTS
+====================================
+
+Test Suite Overview:
+------------------
+Tests the menu interface interactions and DOM manipulations.
+
+Test Cases:
+----------
+1. Menu Item Interactions
+   - Should handle menu item clicks
+   - Should toggle active state on click
+   - Should handle keyboard navigation
+
+2. Interface State
+   - Should maintain correct active item state
+   - Should handle multiple menu items
+
+Environment Setup:
+---------------
+- Uses jsdom for DOM simulation
+- Simulates menu HTML structure
+- Handles event dispatching

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Configuração do Local</title>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="css/menu.css" />
+    <link rel="stylesheet" type="text/css" href="fonts/roboto.css" />
+    <style>
+      body {
+        overflow-x: hidden;
+        overflow-y: hidden;
+        cursor: default;
+        background: #000;
+      }
+      .welcome {
+        margin: 30px 30px 30px 30px;
+        position: relative;
+        height: 20px;
+        width: 90%;
+        background: transparent;
+        color: #FFF;
+        font-family: "Roboto Condensed";
+        font-weight: 80%;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        font-size: 30px;
+        text-align: center;
+      }
+      .config-item {
+        font-size: 28px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 85%;
+        margin: 0 auto 0 100px;
+        padding: 35px 40px;
+        color: #000;
+        background: #FFF;
+        box-sizing: border-box;
+        border: 3px solid black;
+        border-radius: 10px;
+        box-shadow: 3px 3px 3px 1px rgba(105, 105, 105, 0.7);
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+
+      .config-item:hover {
+        background-color: #4285f4;
+        color: #FFF;
+      }
+
+      .config-item:active {
+        background-color: #80a9f6;
+        color: #FFF;
+      }
+      .position_button_1, .position_button_2, .position_button_3 {
+        position: absolute;
+        left: 20px;
+        width: 75px;
+        height: auto;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 1;
+        cursor: pointer;
+      }
+      .opcoes {
+        position: relative;
+        padding: 10px 5px;
+        margin: 40px auto;
+        width: 90%;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+      }
+      h1, h2, h3 {
+        position: relative;
+        width: 100%;
+        margin: 0;
+      }
+      .item-container {
+        position: relative;
+        width: 100%;
+      }
+      .selected-room {
+        color: #FFF;
+        font-family: "Roboto Condensed";
+        font-size: 24px;
+        text-align: center;
+        margin-top: 30px;
+      }
+      .countdown {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        color: #FFF;
+        font-family: "Roboto Condensed";
+        font-size: 16px;
+        z-index: 1000;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="welcome">Configuração do local</div>
+    <div id="countdown" class="countdown"></div>
+    <div class="opcoes">
+      <h1>
+        <img src="images/1_sem_fundo.png" class="position_button_1" onclick="selectRoom('Quarto')">
+        <div class="config-item" onclick="selectRoom('Quarto')">Quarto</div>
+      </h1>
+      <h2>
+        <img src="images/2_sem_fundo.png" class="position_button_2" onclick="selectRoom('Sala de Estar')">
+        <div class="config-item" onclick="selectRoom('Sala de Estar')">Sala de Estar</div>
+      </h2>
+      <h3>
+        <img src="images/3_sem_fundo.png" class="position_button_3" onclick="window.location.href='config_temp.html'">
+        <div class="config-item" onclick="window.location.href='config_temp.html'">Retornar</div>
+      </h3>
+    </div>
+    <div id="roomText" class="selected-room"></div>
+
+    <script>
+      function selectRoom(room) {
+        localStorage.setItem('comodo', room);
+        document.getElementById('roomText').innerText = 'Cômodo selecionado: ' + room;
+      }
+
+      let countdownInterval;
+      let secondsLeft = 30;
+
+      function startCountdown() {
+        clearInterval(countdownInterval);
+        secondsLeft = 30;
+        const countdownDisplay = document.getElementById('countdown');
+        
+        countdownInterval = setInterval(() => {
+          secondsLeft--;
+          countdownDisplay.textContent = `Tela desligará em: ${secondsLeft} segundos`;
+          
+          if (secondsLeft <= 0) {
+            clearInterval(countdownInterval);
+            const { exec } = require('child_process');
+            exec('bash scripts/display_off.sh', (error) => {
+              if (error) console.error('Error executing display_off.sh:', error);
+            });
+            countdownDisplay.textContent = 'Tela desligada';
+          }
+        }, 1000);
+      }
+
+      function resetCountdown() {
+        clearInterval(countdownInterval);
+        secondsLeft = 30;
+        const { exec } = require('child_process');
+        exec('bash scripts/display_on.sh', (error) => {
+          if (error) console.error('Error executing display_on.sh:', error);
+        });
+        startCountdown();
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('mousemove', resetCountdown);
+        document.addEventListener('keypress', resetCountdown);
+        startCountdown();
+      });
+    </script>
+    <script type='module' src="bundle.js"></script>
+    <script src="scripts/renderer.js"></script>
+  </body>
+</html>

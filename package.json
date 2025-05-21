@@ -1,5 +1,5 @@
 {
-  "name": "espelhointeligente",
+  "name": "tcc-fullstack",
   "version": "1.0.0",
   "description": "TCC - Espelho Inteligente ((Pedro Polidori Colombo)",
   "main": "scripts/index.js",
@@ -11,18 +11,35 @@
     "start": "DISPLAY=\"${DISPLAY:=:0}\" ./node_modules/.bin/electron scripts/index.js",
     "install": "electron-rebuild",
     "build": "browserify scripts/teste2.js -o bundle.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha",
+    "test:watch": "mocha --watch"
   },
   "author": "Pedro Polidori Colombo",
   "license": "ISC",
-  "devDependencies": {
-    "electron": "^20.1.4",
-    "electron-rebuild": "^3.2.9"
-  },
   "dependencies": {
     "browserify-fs": "^1.0.0",
+    "electron": "^36.2.0",
     "electron-prebuilt": "^1.4.13",
+    "electron-rebuild": "^3.2.9",
+    "express": "^5.1.0",
     "i": "^0.3.7",
-    "requirejs": "^2.3.6"
+    "mocha": "^11.2.2",
+    "requirejs": "^2.3.6",
+    "socket.io": "^4.8.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/colombo182/tcc-fullstack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/colombo182/tcc-fullstack/issues"
+  },
+  "homepage": "https://github.com/colombo182/tcc-fullstack#readme",
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "jsdom-global": "^3.0.2",
+    "onoff": "^6.0.3",
+    "proxyquire": "^2.1.3",
+    "sinon": "^20.0.0"
   }
 }
