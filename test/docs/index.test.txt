@@ -1,0 +1,29 @@
+INDEX.TEST.JS - ELECTRON APP UNIT TESTS
+=====================================
+
+Test Suite Overview:
+------------------
+Tests the Electron application initialization and window management functionality.
+
+Test Cases:
+----------
+1. Window Management
+   - Should handle window closed event correctly
+   - Should maximize window on creation
+   - Should set proper window preferences:
+     * Dark theme
+     * Fullscreen
+     * Background color
+     * Context isolation
+     * Node integration
+     * Sandbox settings
+
+2. Window Configuration
+   - Should set correct initial position (x=0, y=0)
+   - Should configure renderer process settings correctly
+
+Mocks Used:
+----------
+- BrowserWindow
+- Electron app
+- Window instance

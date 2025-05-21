@@ -38,10 +38,67 @@ function Server(config, callback) {
 	}
 	const io = require("socket.io")(server, {
 		cors: {
-			origin: /.*$/,
+			origin: "http://localhost:8080",
+			methods: ["GET", "POST"],
 			credentials: true
 		},
 		allowEIO3: true
+	});
+
+	// Initialize PIR control
+	const pirControl = require('./pir_control');
+	pirControl.checkDisplay();
+
+	// Initialize PIR sensor
+	const pirSensor = require('./pir_sensor');
+	pirSensor.checkMotion();
+
+	global.io = io; // Make io globally available
+
+	// Add socket button handlers
+	io.on('connection', (socket) => {
+		let pressed = 0;
+		
+		socket.on('button1_pressed', () => {
+			pressed = 1;
+			console.log(pressed);
+			setTimeout(() => {
+				io.emit('chat message', '1 pressed');
+				io.emit('page_message', 'Configurando clima e tempo...');
+			}, 100);
+		});
+
+		socket.on('button2_pressed', () => {
+			pressed = 1;
+			console.log(pressed);
+			setTimeout(() => {
+				io.emit('chat message', '2 pressed');
+			}, 100);
+		});
+
+		socket.on('button3_pressed', () => {
+			pressed = 1;
+			console.log(pressed);
+			setTimeout(() => {
+				io.emit('chat message', '3 pressed');
+			}, 100);
+		});
+
+		socket.on('button4_pressed', () => {
+			pressed = 1;
+			console.log(pressed);
+			setTimeout(() => {
+				io.emit('chat message', '4 pressed');
+			}, 100);
+		});
+
+		socket.on('start_pressed', () => {
+			pressed = 1;
+			console.log(pressed);
+			setTimeout(() => {
+				io.emit('chat message', 'start pressed');
+			}, 100);
+		});
 	});
 
 	server.on("connection", (socket) => {

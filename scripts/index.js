@@ -35,34 +35,46 @@ function createWindow() {
 		autoHideMenuBar : true,
  		fullscreen: true,
 		webPreferences: {
-			contextIsolation: true,
 			nodeIntegration: true,
-			sandbox: true,
-			preload: path.join(__dirname, "preload.js"),
+			contextIsolation: false,
+			enableRemoteModule: true,
+			webSecurity: false
 		},
+		// Add these options for X11
+        platform: 'linux',
 		backgroundColor: "#000000"
 	})
 
-        mainWindow.maximize();
+    // Handle X server errors
+    mainWindow.on('unresponsive', () => {
+        console.log('Window became unresponsive, checking X server...');
+    });
 
-        // and load the menu.html of the app.
-        //console.log(__dirname);
-        mainWindow.loadURL(url.format({
-            pathname: path.join(__dirname, '../menu.html'),
-            protocol: 'file:',
-            slashes: true
-        }))
+    mainWindow.maximize();
 
-        // Open the DevTools.
-   	//mainWindow.webContents.openDevTools()
+    // and load the menu.html of the app.
+    //console.log(__dirname);
+    mainWindow.loadURL(url.format({
+        pathname: path.join(__dirname, '../menu.html'),
+        protocol: 'file:',
+        slashes: true
+    }))
+
+    //mainWindow.webContents.openDevTools(); // Add this line to open dev tools
 
 	// Emitted when the window is closed.
-    	mainWindow.on('closed', function() {
-            // Dereference the window object, usually you would store windows
-            // in an array if your app supports multi windows, this is the time
-            // when you should delete the corresponding element.
-            mainWindow = null
-        })
+    mainWindow.on('closed', function() {
+        // Dereference the window object, usually you would store windows
+        // in an array if your app supports multi windows, this is the time
+        // when you should delete the corresponding element.
+        mainWindow = null
+    })
+}
+
+// Add X server check before app.on('ready')
+if (!process.env.DISPLAY) {
+    console.error('No DISPLAY environment variable set');
+    process.exit(1);
 }
 
 // This is required to be set to false beginning in Electron v9 otherwise
@@ -90,6 +102,6 @@ app.on('activate', function() {
     if (mainWindow === null) {
         createWindow()
     }
-}) 
+})
 
 

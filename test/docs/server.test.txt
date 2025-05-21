@@ -1,0 +1,42 @@
+SERVER.TEST.JS - SERVER UNIT TESTS
+==============================
+
+Test Suite Overview:
+------------------
+Tests the HTTP server functionality, routing, and middleware.
+
+Test Cases:
+----------
+1. Server Initialization
+   - Should create HTTP server
+   - Should use correct port and address
+   - Should handle HTTPS configuration
+
+2. Static File Serving
+   - Should serve files from correct directories:
+     * /config
+     * /css
+     * /fonts
+     * /modules
+     * /vendor
+     * /translations
+     * /tests/configs
+
+3. API Endpoints
+   - Should handle CORS requests
+   - Should serve configuration data
+   - Should handle version requests
+   - Should serve root path
+
+4. Error Handling
+   - Should handle CORS errors
+   - Should handle invalid URLs
+   - Should handle missing resources
+
+Mocks Used:
+----------
+- Express
+- HTTP/HTTPS server
+- Socket.IO
+- File system
+- Logger
