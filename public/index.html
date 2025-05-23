@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Mirror</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            transform: rotate(-90deg);
+            transform-origin: left top;
+            width: 100vh;
+            height: 100vw;
+            position: absolute;
+            top: 100%;
+            left: 0;
+        }
+        #content {
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="content">
+        <!-- Your existing mirror content will go here -->
+    </div>
+    <script>
+        // Auto-rotate based on screen dimensions
+        if (window.innerHeight > window.innerWidth) {
+            document.body.classList.add('rotated');
+        }
+    </script>
+</body>
+</html>
