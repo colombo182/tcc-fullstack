@@ -99,12 +99,12 @@
     <div class="welcome">Configuração do Tempo</div>
     <div class="opcoes">
       <h1>
-        <img src="images/1_sem_fundo.png" class="position_button_1" onclick="selectFormat('Sistema de 12:00 am e 12:00 pm')">
-        <div class="config-item" onclick="selectFormat('Sistema de 12:00 am e 12:00 pm')">Sistema de 12:00 am e 12:00 pm</div>
+        <img src="images/1_sem_fundo.png" class="position_button_1" onclick="selectFormat('12')">
+        <div class="config-item" onclick="selectFormat('12')">Sistema de 12:00 am e 12:00 pm</div>
       </h1>
       <h2>
-        <img src="images/2_sem_fundo.png" class="position_button_2" onclick="selectFormat('Sistema de 24h')">
-        <div class="config-item" onclick="selectFormat('Sistema de 24h')">Sistema de 24h</div>
+        <img src="images/2_sem_fundo.png" class="position_button_2" onclick="selectFormat('24')">
+        <div class="config-item" onclick="selectFormat('24')">Sistema de 24h</div>
       </h2>
       <h3>
         <img src="images/3_sem_fundo.png" class="position_button_3" onclick="window.location.href='config_clima.html'">
@@ -116,7 +116,8 @@
     <script>
       function selectFormat(format) {
         localStorage.setItem('formato_hora', format);
-        document.getElementById('formatText').innerText = 'Formato selecionado: ' + format;
+        const displayText = format === '12' ? 'Sistema de 12:00 am e 12:00 pm' : 'Sistema de 24h';
+        document.getElementById('formatText').innerText = 'Formato selecionado: ' + displayText;
       }
 
       let countdownInterval;
