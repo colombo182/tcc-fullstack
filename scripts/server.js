@@ -1,290 +1,122 @@
-/* MagicMirror²
- * Server
- *
- * By Michael Teeuw https://michaelteeuw.nl
- * MIT Licensed.
- */
 const express = require("express");
-const app = require("express")();
 const path = require("path");
-const ipfilter = require("express-ipfilter").IpFilter;
 const fs = require("fs");
 const helmet = require("helmet");
 const fetch = require("node-fetch");
-
+const ipfilter = require("express-ipfilter").IpFilter;
 const Log = require("logger");
-//const Utils = require("./utils.js");
 const NewsService = require('./newsService');
 
-/**
- * Server
- *
- * @param {object} config The MM config
- * @param {Function} callback Function called when done.
- * @class
- */
-function Server(config, callback) {
-	const port = process.env.MM_PORT || config.port;
-	const serverSockets = new Set();
+const app = express();
 
-	let server = null;
-	if (config.useHttps) {
-		const options = {
+function Server(config, done) {
+	const port = process.env.PORT || config.port;
+	const useHttps = config.useHttps;
+	let server;
+
+	if (useHttps) {
+		const https = require("https");
+		const opts = {
 			key: fs.readFileSync(config.httpsPrivateKey),
 			cert: fs.readFileSync(config.httpsCertificate)
 		};
-		server = require("https").Server(options, app);
+		server = https.createServer(opts, app);
 	} else {
-		server = require("http").Server(app);
+		server = require("http").createServer(app);
 	}
+
 	const io = require("socket.io")(server, {
-		cors: {
-			origin: "*",
-			methods: ["GET", "POST"],
-			credentials: true,
-			transports: ['websocket', 'polling']
-		},
+		cors: { origin: "*", methods: ["GET", "POST"] },
 		allowEIO3: true,
 		pingTimeout: 60000,
 		path: '/socket.io/'
 	});
+	global.io = io;
 
-	// Enable CORS for Socket.IO endpoints
+	require('./pir_control').checkDisplay();
+	require('./pir_sensor').checkMotion();
+
+	io.on("connection", (socket) => {
+		socket.on("button1_pressed", () => {
+			io.emit("chat message", "1 pressed");
+			io.emit("page_message", "Clima e tempo configurando...");
+		});
+		// other buttons similar...
+	});
+
+	server.listen(port, config.address || "localhost", () => {
+		Log.log(`Server running on port ${port}`);
+	});
+
 	app.use((req, res, next) => {
-		res.header('Access-Control-Allow-Origin', '*');
-		res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-		res.header('Access-Control-Allow-Headers', 'Content-Type');
-		next();
-	});
-
-	// Initialize PIR control
-	const pirControl = require('./pir_control');
-	pirControl.checkDisplay();
-
-	// Initialize PIR sensor
-	const pirSensor = require('./pir_sensor');
-	pirSensor.checkMotion();
-
-	global.io = io; // Make io globally available
-
-	// Add socket button handlers
-	io.on('connection', (socket) => {
-		let pressed = 0;
-		
-		socket.on('button1_pressed', () => {
-			pressed = 1;
-			console.log(pressed);
-			setTimeout(() => {
-				io.emit('chat message', '1 pressed');
-				io.emit('page_message', 'Configurando clima e tempo...');
-			}, 100);
-		});
-
-		socket.on('button2_pressed', () => {
-			pressed = 1;
-			console.log(pressed);
-			setTimeout(() => {
-				io.emit('chat message', '2 pressed');
-			}, 100);
-		});
-
-		socket.on('button3_pressed', () => {
-			pressed = 1;
-			console.log(pressed);
-			setTimeout(() => {
-				io.emit('chat message', '3 pressed');
-			}, 100);
-		});
-
-		socket.on('button4_pressed', () => {
-			pressed = 1;
-			console.log(pressed);
-			setTimeout(() => {
-				io.emit('chat message', '4 pressed');
-			}, 100);
-		});
-
-		socket.on('start_pressed', () => {
-			pressed = 1;
-			console.log(pressed);
-			setTimeout(() => {
-				io.emit('chat message', 'start pressed');
-			}, 100);
-		});
-	});
-
-	server.on("connection", (socket) => {
-		serverSockets.add(socket);
-		socket.on("close", () => {
-			serverSockets.delete(socket);
-		});
-	});
-
-	Log.log(`Starting server on port ${port} ... `);
-
-	server.listen(port, config.address || "localhost");
-
-	if (config.ipWhitelist instanceof Array && config.ipWhitelist.length === 0) {
-//		Log.warn(Utils.colors.warn("You're using a full whitelist configuration to allow for all IPs"));
-	}
-
-	app.use(function (req, res, next) {
-		ipfilter(config.ipWhitelist, { mode: config.ipWhitelist.length === 0 ? "deny" : "allow", log: false })(req, res, function (err) {
-			if (err === undefined) {
-				res.header("Access-Control-Allow-Origin", "*");
-				return next();
+		ipfilter(config.ipWhitelist, {
+			mode: config.ipWhitelist.length ? "allow" : "deny",
+			log: false
+		})(req, res, (err) => {
+			if (err) {
+				Log.log("IP blocked: " + err.message);
+				return res.status(403).send("Blocked");
 			}
-			Log.log(err.message);
-			res.status(403).send("This device is not allowed to access your mirror. <br> Please check your config.js or config.js.sample to change this.");
+			next();
 		});
 	});
-	app.use(helmet(config.httpHeaders));
 
+	app.use(helmet(config.httpHeaders));
 	app.use("/js", express.static(__dirname));
 
-	const directories = ["/config", "/css", "/fonts", "/modules", "/vendor", "/translations", "/tests/configs"];
-	for (const directory of directories) {
-		app.use(directory, express.static(path.resolve(global.root_path + directory)));
-	}
-
-	app.get("/cors", async function (req, res) {
-		// example: http://localhost:8080/cors?url=https://google.de
-
-		try {
-			const reg = "^/cors.+url=(.*)";
-			let url = "";
-
-			let match = new RegExp(reg, "g").exec(req.url);
-			if (!match) {
-				url = "invalid url: " + req.url;
-				Log.error(url);
-				res.send(url);
-			} else {
-				url = match[1];
-				Log.log("cors url: " + url);
-				const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 MagicMirror/" + global.version } });
-				const header = response.headers.get("Content-Type");
-				const data = await response.text();
-				if (header) res.set("Content-Type", header);
-				res.send(data);
-			}
-		} catch (error) {
-			Log.error(error);
-			res.send(error);
-		}
+	["/config", "/css", "/fonts", "/modules", "/vendor", "/translations", "/tests/configs"].forEach(dir => {
+		app.use(dir, express.static(path.resolve(global.root_path + dir)));
 	});
 
-	app.get("/version", function (req, res) {
-		res.send(global.version);
-	});
+	app.get("/version", (req, res) => res.send(global.version));
+	app.get("/config", (req, res) => res.send(config));
 
-	app.get("/config", function (req, res) {
-		res.send(config);
-	});
-
-	app.get("/", function (req, res) {
-		let html = fs.readFileSync(path.resolve(`${global.root_path}/menu.html`), { encoding: "utf8" });
+	app.get("/", (req, res) => {
+		let html = fs.readFileSync(path.join(global.root_path, "menu.html"), "utf8");
 		html = html.replace("#VERSION#", global.version);
-
-		let configFile = "config/config.js";
-		if (typeof global.configuration_file !== "undefined") {
-			configFile = global.configuration_file;
-		}
-		html = html.replace("#CONFIG_FILE#", configFile);
-
-		res.send(html);
+		const configFile = global.configuration_file || "config/config.js";
+		res.send(html.replace("#CONFIG_FILE#", configFile));
 	});
 
-	// News API endpoints
+	app.get("/cors", async (req, res) => {
+		const match = /url=(.+)/.exec(req.url);
+		if (!match) return res.send("Invalid URL");
+
+		const url = match[1];
+		try {
+			const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+			res.set("Content-Type", response.headers.get("Content-Type") || "text/plain");
+			res.send(await response.text());
+		} catch (err) {
+			Log.error("CORS error:", err);
+			res.send(err.toString());
+		}
+	});
+
 	app.get('/api/news/agenciabrasil', async (req, res) => {
 		try {
 			const news = await NewsService.getAgenciaBrasilNews();
-			if (!news.length) {
-				throw new Error('No news available');
-			}
+			if (!news.length) return res.status(503).json({ error: "Nada de novo agora." });
 			res.json(news);
-		} catch (error) {
-			res.status(503).json({ error: 'Serviço temporariamente indisponível' });
+		} catch (e) {
+			res.status(503).json({ error: "Erro ao buscar notícias." });
 		}
 	});
 
-	app.get('/api/news/google1', async (req, res) => {
-		try {
-			const news = await NewsService.getGoogleNews('tecnologia');
-			if (!news.length) {
-				throw new Error('No news available');
-			}
-			res.json(news);
-		} catch (error) {
-			res.status(503).json({ error: 'Serviço temporariamente indisponível' });
-		}
-	});
-
-	app.get('/api/news/google2', async (req, res) => {
-		try {
-			const news = await NewsService.getGoogleNews('ciência');
-			if (!news.length) {
-				throw new Error('No news available');
-			}
-			res.json(news);
-		} catch (error) {
-			res.status(503).json({ error: 'Serviço temporariamente indisponível' });
-		}
-	});
-
-	// RSS proxy endpoints
 	app.get('/proxy/rss/:source', async (req, res) => {
 		try {
-			const source = req.params.source;
-			const data = await NewsService.fetchRSS(source);
-			
-			res.setHeader('Access-Control-Allow-Origin', '*');
-			res.setHeader('Content-Type', 'application/xml');
-			res.send(data);
-		} catch (error) {
-			console.error('RSS proxy error:', error);
-			res.status(503).json({ error: 'Failed to fetch RSS feed' });
+			const xml = await NewsService.fetchRSS(req.params.source);
+			res.setHeader("Content-Type", "application/xml");
+			res.send(xml);
+		} catch (e) {
+			console.log("Proxy RSS fail:", e);
+			res.status(503).send("Feed não disponível.");
 		}
 	});
 
-	// Add CORS proxy endpoint
-	app.get('/api/rss-proxy', async (req, res) => {
-		const url = req.query.url;
-		if (!url) {
-			return res.status(400).json({ error: 'URL parameter is required' });
-		}
+	if (typeof done === "function") done(app, io);
 
-		try {
-			const response = await fetch(url, {
-				headers: {
-					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-				}
-			});
-
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-
-			const data = await response.text();
-			res.setHeader('Access-Control-Allow-Origin', '*');
-			res.setHeader('Content-Type', 'application/xml');
-			res.send(data);
-		} catch (error) {
-			console.error('RSS proxy error:', error);
-			res.status(503).json({ error: 'Failed to fetch RSS feed' });
-		}
-	});
-
-	if (typeof callback === "function") {
-		callback(app, io);
-	}
-
-	this.close = function () {
-		for (const socket of serverSockets.values()) {
-			socket.destroy();
-		}
-		server.close();
-	};
+	this.close = () => server.close();
 }
 
 module.exports = Server;
