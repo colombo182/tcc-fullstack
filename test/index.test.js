@@ -1,6 +1,10 @@
-const assert = require('assert');
-const sinon = require('sinon');
-const proxyquire = require('proxyquire');
+import { strict as assert } from 'assert';
+import sinon from 'sinon';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Create a mock BrowserWindow instance
 const browserWindowInstance = {

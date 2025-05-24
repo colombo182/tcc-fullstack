@@ -1,5 +1,8 @@
-const assert = require('assert');
-const sinon = require('sinon'); // Import sinon for mocking
+import { strict as assert } from 'assert';
+import sinon from 'sinon';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 const proxyquire = require('proxyquire');
 
 describe('Server', function () {

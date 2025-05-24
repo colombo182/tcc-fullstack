@@ -4,6 +4,8 @@
     <title>Espelho inteligente by Pedro Polidori Colombo</title>
 
     <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
 
     <link rel="stylesheet" type="text/css" href="css/menu.css" />
     <link rel="stylesheet" type="text/css" href="fonts/roboto.css" />
@@ -13,6 +15,18 @@
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
       let socket;
+      let isRaspberryPi = false;
+
+      // Check OS on load
+      fetch('/check-os')
+        .then(response => response.json())
+        .then(data => {
+          isRaspberryPi = data.isRaspberryPi;
+        })
+        .catch(error => {
+          console.warn('OS check failed:', error);
+          isRaspberryPi = false;
+        });
 
       // Initialize everything after DOM loads
       document.addEventListener('DOMContentLoaded', () => {
@@ -67,30 +81,6 @@
       }
     </script>
 
-    <script data-main="scripts/main" src="node_modules/requirejs/require.js"></script>
-    <!--<script data-main="scripts/main" src="Touch_sensor/node_modules/onoff/onoff.js"></script>-->
-
-    <!--<script type="text/javascript">
-      alert('teste');
-      let Gpio = require('onoff').Gpio;
-      let upKey = new Gpio(17, 'in');
-      let downKey = new Gpio(21, 'in');
-      let pressed = "not";
-
-      alert('fora do while');
-
-      while (true) {
-	alert('tá no while');
-        if (upKey.readSync() === 1) {
-          alert('Key UP pressed');
-          break;
-        }
-        if (downKey.readSync() === 1) {
-          alert('Key DOWN pressed');
-          break;
-        }
-      }
-    </script>-->
     <style>
       body {
         overflow-x: hidden;
@@ -203,6 +193,8 @@
         font-size: 18px;  /* Decreased from 24px to 18px */
         z-index: 1000;
       }
+
+      /* Remove fullscreen styles */
     </style>
   </head>
   <body>
@@ -237,7 +229,6 @@
     <!-- Move text display outside opcoes div -->
     <div id="configValues" class="selected-values"></div>
 
-    <script src="bundle.js"></script>
     <script>
       function displayConfig() {
         const localizacao = localStorage.getItem('localizacao') || 'Não definido';
@@ -293,16 +284,19 @@
           secondsLeft = 30;
           const countdownDisplay = document.getElementById('countdown');
           
-          countdownInterval = setInterval(() => {
+          countdownInterval = setInterval(async () => {
               secondsLeft--;
               countdownDisplay.textContent = `Tela desligará em: ${secondsLeft} segundos`;
               
               if (secondsLeft <= 0) {
                   clearInterval(countdownInterval);
-                  const { exec } = require('child_process');
-                  exec('bash scripts/display_off.sh', (error) => {
-                      if (error) console.error('Error executing display_off.sh:', error);
-                  });
+                  if (isRaspberryPi) {
+                      try {
+                          await fetch('/api/display/off', { method: 'POST' });
+                      } catch (error) {
+                          console.warn('Display control failed:', error);
+                      }
+                  }
                   countdownDisplay.textContent = 'Tela desligada';
               }
           }, 1000);
@@ -311,10 +305,10 @@
       function resetCountdown() {
           clearInterval(countdownInterval);
           secondsLeft = 30;
-          const { exec } = require('child_process');
-          exec('bash scripts/display_on.sh', (error) => {
-              if (error) console.error('Error executing display_on.sh:', error);
-          });
+          if (isRaspberryPi) {
+              fetch('/api/display/on', { method: 'POST' })
+                  .catch(error => console.warn('Display control failed:', error));
+          }
           startCountdown();
       }
 

@@ -1,0 +1,3 @@
+--require esm
+--experimental-modules
+--experimental-vm-modules
