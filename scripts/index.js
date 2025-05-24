@@ -1,107 +1,95 @@
 "use strict";
 
-const electron = require("electron");
-const path = require("path");
-const url = require('url')
-//const Server = require(`${__dirname}/server`);
-//const Utils = require(`${__dirname}/utils`);
+const express = require('express');
+const http = require('http');
+const { exec } = require('child_process');
+const path = require('path');
+const fs = require('fs');
 
-// Module to control application life.
-const app = electron.app;
+const expressApp = express();
+const server = http.createServer(expressApp);
+const port = 8080;
 
-// Module to create native browser window.
-const BrowserWindow = electron.BrowserWindow;
+// Check if running on Raspberry Pi
+const isRaspberryPi = fs.existsSync('/proc/cpuinfo') && 
+                      fs.readFileSync('/proc/cpuinfo', 'utf8').includes('Raspberry Pi');
 
-// Keep a global reference of the window object, if you don't, the window will
-// be closed automatically when the JavaScript object is garbage collected.
-let mainWindow;
+// Only load DHT sensor module on Raspberry Pi
+let dhtSensor = null;
+if (isRaspberryPi) {
+    dhtSensor = require('node-dht-sensor');
+    dhtSensor.initialize(11, 13);
+}
 
-// Get version number.
-global.version = require(`${__dirname}/../package.json`).version;
-console.log("Iniciando Espelho Inteligente: v" + global.version);
-console.log(__dirname);
+// Serve static files from public directory
+expressApp.use(express.static(path.join(__dirname, '../')));
 
-// global absolute root path
-global.root_path = path.resolve(`${__dirname}/../`);
-//console.log(global.root_path);
+// Add root route to serve menu.html
+expressApp.get('/', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {
+                    margin: 0;
+                    padding: 0;
+                    transform: rotate(-90deg);
+                    transform-origin: left top;
+                    width: 100vh;
+                    height: 100vw;
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                }
+                iframe {
+                    border: 0;
+                    width: 100%;
+                    height: 100%;
+                }
+            </style>
+        </head>
+        <body>
+            <iframe src="/menu.html"></iframe>
+        </body>
+        </html>
+    `);
+});
 
-function createWindow() {
-	mainWindow = new BrowserWindow({
-		width: 800,
-		height: 600,
-		x: 0,
-		y: 0,
-		darkTheme: true,
-		autoHideMenuBar : true,
- 		fullscreen: true,
-		webPreferences: {
-			nodeIntegration: true,
-			contextIsolation: false,
-			enableRemoteModule: true,
-			webSecurity: false
-		},
-		// Add these options for X11
-        platform: 'linux',
-		backgroundColor: "#000000"
-	})
-
-    // Handle X server errors
-    mainWindow.on('unresponsive', () => {
-        console.log('Window became unresponsive, checking X server...');
+// Conditionally add DHT routes
+if (isRaspberryPi) {
+    expressApp.get('/dht_temp', async (req, res) => {
+        dhtSensor.read(11, 13, (err, temp, hum) => {
+            if (err) {
+                res.status(500).send('Erro na leitura do sensor');
+                return;
+            }
+            res.send(`Temperatura interna: ${temp.toFixed(1)}°C`);
+        });
     });
 
-    mainWindow.maximize();
-
-    // and load the menu.html of the app.
-    //console.log(__dirname);
-    mainWindow.loadURL(url.format({
-        pathname: path.join(__dirname, '../menu.html'),
-        protocol: 'file:',
-        slashes: true
-    }))
-
-    //mainWindow.webContents.openDevTools(); // Add this line to open dev tools
-
-	// Emitted when the window is closed.
-    mainWindow.on('closed', function() {
-        // Dereference the window object, usually you would store windows
-        // in an array if your app supports multi windows, this is the time
-        // when you should delete the corresponding element.
-        mainWindow = null
-    })
+    expressApp.get('/dht_humidity', async (req, res) => {
+        dhtSensor.read(11, 13, (err, temp, hum) => {
+            if (err) {
+                res.status(500).send('Erro na leitura do sensor');
+                return;
+            }
+            res.send(`Umidade interna: ${hum.toFixed(1)}%`);
+        });
+    });
 }
 
-// Add X server check before app.on('ready')
-if (!process.env.DISPLAY) {
-    console.error('No DISPLAY environment variable set');
-    process.exit(1);
-}
+// Add OS check endpoint
+expressApp.get('/check-os', (req, res) => {
+    res.json({ isRaspberryPi });
+});
 
-// This is required to be set to false beginning in Electron v9 otherwise
-// the SerialPort module can not be loaded in Renderer processes like we are doing
-// in this example. The linked Github issues says this will be deprecated starting in v10,
-// however it appears to still be changed and working in v11.2.0
-// Relevant discussion: https://github.com/electron/electron/issues/18397
-app.allowRendererProcessReuse=false
-
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.on('ready', createWindow)
-
-// Quit when all windows are closed.
-app.on('window-all-closed', function() {
-    // On OS X it is common for applications and their menu bar
-    // to stay active until the user quits explicitly with Cmd + Q
-    app.quit()
-})
-
-app.on('activate', function() {
-    // On OS X it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (mainWindow === null) {
-        createWindow()
-    }
-})
+// Start HTTP server and open browser
+server.listen(port, '0.0.0.0', () => {
+    console.log(`Servidor iniciado com sucesso na porta ${port}`);
+    // Use xdg-open for Linux systems
+    exec(`xdg-open http://localhost:${port}/`);
+});
 
 

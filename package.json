@@ -26,8 +26,10 @@
     "electron-rebuild": "^3.2.9",
     "express": "^5.1.0",
     "i": "^0.3.7",
-    "mocha": "^11.2.2",
+    "node-fetch": "^3.3.2",
+    "open": "^10.1.2",
     "requirejs": "^2.3.6",
+    "rss-parser": "^3.13.0",
     "socket.io": "^4.8.1"
   },
   "optionalDependencies": {
@@ -35,8 +37,10 @@
     "onoff": "^6.0.3"
   },
   "devDependencies": {
+    "esm": "^3.2.25",
     "jsdom": "^26.1.0",
     "jsdom-global": "^3.0.2",
+    "mocha": "^11.4.0",
     "proxyquire": "^2.1.3",
     "sinon": "^20.0.0"
   },
@@ -47,5 +51,6 @@
   "bugs": {
     "url": "https://github.com/colombo182/tcc-fullstack/issues"
   },
-  "homepage": "https://github.com/colombo182/tcc-fullstack#readme"
+  "homepage": "https://github.com/colombo182/tcc-fullstack#readme",
+  "type": "module"
 }

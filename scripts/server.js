@@ -10,10 +10,11 @@ const path = require("path");
 const ipfilter = require("express-ipfilter").IpFilter;
 const fs = require("fs");
 const helmet = require("helmet");
-const fetch = require("fetch");
+const fetch = require("node-fetch");
 
 const Log = require("logger");
 //const Utils = require("./utils.js");
+const NewsService = require('./newsService');
 
 /**
  * Server
@@ -38,11 +39,22 @@ function Server(config, callback) {
 	}
 	const io = require("socket.io")(server, {
 		cors: {
-			origin: "http://localhost:8080",
+			origin: "*",
 			methods: ["GET", "POST"],
-			credentials: true
+			credentials: true,
+			transports: ['websocket', 'polling']
 		},
-		allowEIO3: true
+		allowEIO3: true,
+		pingTimeout: 60000,
+		path: '/socket.io/'
+	});
+
+	// Enable CORS for Socket.IO endpoints
+	app.use((req, res, next) => {
+		res.header('Access-Control-Allow-Origin', '*');
+		res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+		res.header('Access-Control-Allow-Headers', 'Content-Type');
+		next();
 	});
 
 	// Initialize PIR control
@@ -181,6 +193,86 @@ function Server(config, callback) {
 		html = html.replace("#CONFIG_FILE#", configFile);
 
 		res.send(html);
+	});
+
+	// News API endpoints
+	app.get('/api/news/agenciabrasil', async (req, res) => {
+		try {
+			const news = await NewsService.getAgenciaBrasilNews();
+			if (!news.length) {
+				throw new Error('No news available');
+			}
+			res.json(news);
+		} catch (error) {
+			res.status(503).json({ error: 'Serviço temporariamente indisponível' });
+		}
+	});
+
+	app.get('/api/news/google1', async (req, res) => {
+		try {
+			const news = await NewsService.getGoogleNews('tecnologia');
+			if (!news.length) {
+				throw new Error('No news available');
+			}
+			res.json(news);
+		} catch (error) {
+			res.status(503).json({ error: 'Serviço temporariamente indisponível' });
+		}
+	});
+
+	app.get('/api/news/google2', async (req, res) => {
+		try {
+			const news = await NewsService.getGoogleNews('ciência');
+			if (!news.length) {
+				throw new Error('No news available');
+			}
+			res.json(news);
+		} catch (error) {
+			res.status(503).json({ error: 'Serviço temporariamente indisponível' });
+		}
+	});
+
+	// RSS proxy endpoints
+	app.get('/proxy/rss/:source', async (req, res) => {
+		try {
+			const source = req.params.source;
+			const data = await NewsService.fetchRSS(source);
+			
+			res.setHeader('Access-Control-Allow-Origin', '*');
+			res.setHeader('Content-Type', 'application/xml');
+			res.send(data);
+		} catch (error) {
+			console.error('RSS proxy error:', error);
+			res.status(503).json({ error: 'Failed to fetch RSS feed' });
+		}
+	});
+
+	// Add CORS proxy endpoint
+	app.get('/api/rss-proxy', async (req, res) => {
+		const url = req.query.url;
+		if (!url) {
+			return res.status(400).json({ error: 'URL parameter is required' });
+		}
+
+		try {
+			const response = await fetch(url, {
+				headers: {
+					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+				}
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const data = await response.text();
+			res.setHeader('Access-Control-Allow-Origin', '*');
+			res.setHeader('Content-Type', 'application/xml');
+			res.send(data);
+		} catch (error) {
+			console.error('RSS proxy error:', error);
+			res.status(503).json({ error: 'Failed to fetch RSS feed' });
+		}
 	});
 
 	if (typeof callback === "function") {

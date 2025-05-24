@@ -1,39 +1,48 @@
-let countdownInterval;
-let secondsLeft = 30;
+class CountdownManager {
+    constructor(displayElement, displayControl = null) {
+        this.displayElement = displayElement;
+        this.displayControl = displayControl;
+        this.interval = null;
+        this.secondsLeft = 30;
+    }
 
-function startCountdown() {
-    clearInterval(countdownInterval);
-    secondsLeft = 30;
-    const countdownDisplay = document.getElementById('countdown');
-    
-    countdownInterval = setInterval(() => {
-        secondsLeft--;
-        countdownDisplay.textContent = `Tela desligará em: ${secondsLeft} segundos`;
+    start() {
+        this.clear();
+        this.secondsLeft = 30;
+        this.updateDisplay();
         
-        if (secondsLeft <= 0) {
-            clearInterval(countdownInterval);
-            const { exec } = require('child_process');
-            exec('bash scripts/display_off.sh', (error) => {
-                if (error) console.error('Error executing display_off.sh:', error);
-            });
-            countdownDisplay.textContent = 'Tela desligada';
+        this.interval = setInterval(() => {
+            this.secondsLeft--;
+            this.updateDisplay();
+            
+            if (this.secondsLeft <= 0) {
+                this.clear();
+                if (this.displayControl) {
+                    this.displayControl.turnOff();
+                }
+                this.displayElement.textContent = 'Tela desligada';
+            }
+        }, 1000);
+    }
+
+    reset() {
+        this.clear();
+        if (this.displayControl) {
+            this.displayControl.turnOn();
         }
-    }, 1000);
+        this.start();
+    }
+
+    clear() {
+        if (this.interval) {
+            clearInterval(this.interval);
+            this.interval = null;
+        }
+    }
+
+    updateDisplay() {
+        this.displayElement.textContent = `Tela desligará em: ${this.secondsLeft} segundos`;
+    }
 }
 
-function resetCountdown() {
-    clearInterval(countdownInterval);
-    secondsLeft = 30;
-    const { exec } = require('child_process');
-    exec('bash scripts/display_on.sh', (error) => {
-        if (error) console.error('Error executing display_on.sh:', error);
-    });
-    startCountdown();
-}
-
-// Initialize countdown and event listeners
-function initCountdown() {
-    document.addEventListener('mousemove', resetCountdown);
-    document.addEventListener('keypress', resetCountdown);
-    startCountdown();
-}
+module.exports = CountdownManager;

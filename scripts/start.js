@@ -1,7 +1,9 @@
-const { execSync } = require('child_process');
+//const { execSync } = require('child_process');
 const os = require('os');
 const path = require('path');
 const { getDHTReadings } = require('./dht');
+import express from 'express';
+import { execSync } from 'child_process';
 
 function isRaspberryPi() {
     try {
@@ -33,9 +35,9 @@ try {
     console.log(`Running on architecture: ${arch}`);
     
     // Start express server for browser version
-    const express = require('express');
+    //const express = require('express');
     const app = express();
-    const port = 3000;
+    const port = 8080;
     
     app.use(express.static(path.join(__dirname, '../public')));
     

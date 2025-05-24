@@ -22,13 +22,20 @@
 </head>
 <body>
     <div id="content">
+        <div id="clock"></div>
         <!-- Your existing mirror content will go here -->
     </div>
-    <script>
+    <script type="module">
+        import { ClockService } from './js/clockService.js';
+        
         // Auto-rotate based on screen dimensions
         if (window.innerHeight > window.innerWidth) {
             document.body.classList.add('rotated');
         }
+
+        // Initialize clock
+        const clock = new ClockService('clock');
+        clock.start();
     </script>
 </body>
 </html>
